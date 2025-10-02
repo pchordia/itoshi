@@ -1,0 +1,35 @@
+services:
+  - type: web
+    name: itoshi-app
+    env: python
+    plan: starter
+    buildCommand: pip install -r requirements.txt gunicorn
+    startCommand: gunicorn -w 4 -b 0.0.0.0:$PORT --timeout 300 web_app:app
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.10.0
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: KLING_ACCESS_KEY
+        sync: false
+      - key: KLING_SECRET_KEY
+        sync: false
+      - key: KLING_BASE_URL
+        value: https://app.klingai.com
+      - key: ANIME_MAX_WORKERS
+        value: 10
+      - key: I2V_MAX_WORKERS
+        value: 2
+      - key: REQUEST_TIMEOUT_SECONDS
+        value: 120
+      - key: MAX_RETRIES
+        value: 6
+      - key: IMAGE_SIZE
+        value: auto
+      - key: VIDEO_DURATION_SECONDS
+        value: 5
+      - key: KLING_MODEL
+        value: Professional v2.1
+      - key: ANALYSIS_MODEL
+        value: chatgpt-5
+

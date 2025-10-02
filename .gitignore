@@ -1,0 +1,12 @@
+.env
+build/
+dist/
+.eggs/
+*.egg-info/
+__pycache__/
+*.pyc
+*.pyo
+logs/
+outputs/
+temp_*/
+prompts/temp_*.txt

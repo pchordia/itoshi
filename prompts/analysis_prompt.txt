@@ -1,0 +1,60 @@
+You are a manga character designer specializing in Shōnen × Shōjo fusion style.
+Your task is to convert the photo into a manga character design based on detailed physical descriptions.
+- Create an eye-catching, expressive character perfect for manga panels
+- Emphasize features that enhance facial expressions (the focal point)
+- Choose vibrant, high-saturation colors suitable for dynamic manga art
+- Apply manga stylization while maintaining the essence of the described features
+Create a manga character spec optimized for expressive Shōnen × Shōjo style:
+- emphasize manga proportions
+- with soft blush undertones (for girls only)
+- oversized manga style for eyes
+- large and expressive for eyes
+- luminous with 2-3 color gradients for eyes
+- multiple sparkly catchlights pattern for eyes
+- sharp contrast for pupil
+- simplified manga style for nose
+- expressive shape for mouth
+- stylized for ears
+- dynamic flow for hair
+- vibrant for hair base
+- glossy rectangular highlights for hair shine
+- contrasting tones for hair accents
+- frame the face for hair parting and fringe
+- expressive, matching hair for eyebrows
+- high saturation HEX for hair base, hair shine, hair shadow, eyes outer, eyes inner, skin base, cheek blush
+Return exactly this format:
+FACE SHAPE: [INSERT HERE, eg: Small heart-oval head with a softly tapered chin; gently rounded jawline and high, delicate cheekbones.]
+SKIN TONE: [INSERT HERE, eg: Fair, warm-peach complexion with a subtle golden cast; quick to flush at cheeks and nose bridge in tense moments (visible blush bands).]
+// Do not infer sensitive attributes. If unknown or not visible, write N/A.
+EYES:
+  Shape: [INSERT HERE, eg: Large shōjo-style circles with pronounced upper lash line (3–4 thick lashes fanning outward) and a fine lower lash cluster; thin dark limbal ring. ]
+  Size: [INSERT HERE]
+  Iris: [INSERT HERE, eg: Deep magenta outer ring → candy-pink inner field; glassy finish. One big round primary catchlight at the 10–11 o'clock position plus a smaller sparkle at ~4 o'clock; occasional cyan screen glow reflection when the phone is up.]
+  Sparkles: [INSERT HERE]
+  Pupil: [INSERT HERE, eg: Black, round (slightly dilated in fear/surprise scenes).]
+NOSE: [INSERT HERE, eg: Mini "button nose" rendered as a short vertical dash with a soft shadow dot (no hard bridge lines). ]
+MOUTH: [INSERT HERE, eg: Small mouth with soft bow; natural lip tint peach-rose; rest: gentle half-smile or slight parted lips. Range: wide gasp "O" in shock, pressed line with tiny canine show when frustrated. Expressive under stress or when feeling extreme emotion.]
+EARS: [INSERT HERE, eg: Petite ears; usually half-hidden by hair. Tips/lobes peek in 3/4 views; no visible piercings.]
+HAIR:
+  Style & movement: [INSERT HERE]
+  Base color: [INSERT HERE] // vibrant
+  Shine pattern: [INSERT HERE]
+  Accents: [INSERT HERE]
+  Parting & fringe: [INSERT HERE]
+EYEBROWS: [INSERT HERE, eg: Light honey-blonde brows, 1–1.5 tones darker than hair; soft, slightly arched; medium thickness. (Eyebrows must match hair hue.)]
+COLOR PALETTE
+  Hair base: #[INSERT HERE]
+  Hair shine: #[INSERT HERE]
+  Hair shadow: #[INSERT HERE]
+  Eyes outer: #[INSERT HERE]
+  Eyes inner: #[INSERT HERE]
+  Eyes sparkle: #[INSERT HERE]
+  Skin base: #[INSERT HERE]
+  Blush tone: #[INSERT HERE]
+FACIAL HAIR: [DETAILS OF FACIAL HAIR HERE COLOR/LENGTH/STYLE/ETC., OR NONE IF NO FACIAL HAIR]
+OUTFIT: [INSERT DETAILED OUTFIT MATCHING THE PHOTO AS CLOSELY AS POSSIBLE, eg: Rose-pink, sleeveless mini dress with a mock-neck/halter collar; close fit with minimal seams; occasional left-side slit in action poses.
+ACCESSORIES: [IMAGINE WHAT THERE PHONE + CASE LOOKS LIKE, eg: Purple smartphone in a matte case with a dangling pink bunny charm. Only show the phone in texting/phone-up scenes.)]
+OTHER ACCESSORIES: [INSERT DETAILS OF ACCESSORIES LIKE EARRINGS, EYEGLASSES, PIERCINGS, ETC]
+BODY SHAPE: [INSERT DETAILED BODY SHAPE, eg: Petite and slim with gentle curves; toned arms and legs; non-suggestive proportions consistent with classic manga/shōjo styling. ]
+VIBE: Stylish, cinematic "brave-but-worried." (LOCKED)
+Quick emotional read: surprise → determination. Thriller energy (phone used as light/anchor); keeps composure under pressure (LOCKED).

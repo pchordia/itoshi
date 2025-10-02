@@ -1,0 +1,36 @@
+# Files to ignore during deployment
+*.pyc
+__pycache__/
+*.pyo
+*.pyd
+.Python
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+.DS_Store
+.env.local
+*.pem
+*.key
+.vscode/
+.idea/
+.git/
+
+# Test data
+selfie_test/
+selfie_test_2/
+selfie_test_black/
+selfie_test_fb/
+sb_weddding_pics/
+test_images/
+
+# Generated outputs (can be recreated)
+outputs/
+uploads/
+logs/
+
+# Deployment configs for other platforms
+deploy/
+*.pem
+

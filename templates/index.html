@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Anime Video Generator</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🎬 Interactive Anime Video Generator</h1>
+            <p class="subtitle">Turn your selfie into an anime character doing anything you imagine</p>
+        </header>
+
+        <div class="main-content">
+            <!-- Step 1: Upload Photo -->
+            <div class="step" id="step-upload">
+                <div class="step-header">
+                    <span class="step-number">1</span>
+                    <h2>Upload Your Selfie</h2>
+                </div>
+                <div class="step-content">
+                    <div class="upload-area" id="upload-area">
+                        <input type="file" id="image-input" accept="image/*" hidden>
+                        <div class="upload-prompt">
+                            <div class="upload-icon">📸</div>
+                            <p>Click to upload or drag and drop</p>
+                            <p class="upload-hint">PNG, JPG, WEBP (max 16MB)</p>
+                        </div>
+                        <img id="preview-image" class="preview-image" style="display: none;">
+                    </div>
+                    <div id="upload-status" class="status-message"></div>
+                </div>
+            </div>
+
+            <!-- Step 2: Describe What You Want -->
+            <div class="step" id="step-describe">
+                <div class="step-header">
+                    <span class="step-number">2</span>
+                    <h2>What should your character do?</h2>
+                </div>
+                <div class="step-content">
+                    <div class="examples">
+                        <p><strong>Examples:</strong> dance, eat ramen, play guitar, street fashion shoot, basketball moves, karaoke, yoga pose...</p>
+                    </div>
+                    <div class="chat-container" id="chat-container">
+                        <div class="chat-messages" id="chat-messages">
+                            <!-- Messages will be added here -->
+                        </div>
+                    </div>
+                    <div class="input-container">
+                        <input 
+                            type="text" 
+                            id="user-input" 
+                            placeholder="Type your message..." 
+                            disabled
+                        >
+                        <button id="send-button" disabled>Send</button>
+                    </div>
+                    <div class="questions-remaining" id="questions-remaining"></div>
+                </div>
+            </div>
+
+            <!-- Step 3: Generated Prompts -->
+            <div class="step" id="step-prompts" style="display: none;">
+                <div class="step-header">
+                    <span class="step-number">3</span>
+                    <h2>Generated Prompts</h2>
+                </div>
+                <div class="step-content">
+                    <div class="prompt-display">
+                        <div class="prompt-section">
+                            <h3>🎨 Image Prompt (i2i)</h3>
+                            <div class="prompt-text" id="i2i-prompt"></div>
+                        </div>
+                        <div class="prompt-section">
+                            <h3>🎬 Video Prompt (i2v)</h3>
+                            <div class="prompt-text" id="i2v-prompt"></div>
+                        </div>
+                    </div>
+                    <button id="generate-button" class="primary-button">
+                        ✨ Generate Video
+                    </button>
+                </div>
+            </div>
+
+            <!-- Step 4: Generation Progress -->
+            <div class="step" id="step-progress" style="display: none;">
+                <div class="step-header">
+                    <span class="step-number">4</span>
+                    <h2>Generating...</h2>
+                </div>
+                <div class="step-content">
+                    <div class="progress-container">
+                        <div class="progress-log" id="progress-log"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Step 5: Results -->
+            <div class="step" id="step-results" style="display: none;">
+                <div class="step-header">
+                    <span class="step-number">5</span>
+                    <h2>Your Anime Video is Ready! 🎉</h2>
+                </div>
+                <div class="step-content">
+                    <div class="results-grid">
+                        <div class="result-item">
+                            <h3>Anime Image</h3>
+                            <img id="result-image" class="result-media">
+                        </div>
+                        <div class="result-item">
+                            <h3>Anime Video</h3>
+                            <video id="result-video" class="result-media" controls loop></video>
+                        </div>
+                    </div>
+                    <button id="reset-button" class="secondary-button">
+                        🔄 Create Another
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <footer>
+            <p>Powered by OpenAI GPT-5 & Kling AI</p>
+        </footer>
+    </div>
+
+    <script src="/static/app.js"></script>
+</body>
+</html>
+
