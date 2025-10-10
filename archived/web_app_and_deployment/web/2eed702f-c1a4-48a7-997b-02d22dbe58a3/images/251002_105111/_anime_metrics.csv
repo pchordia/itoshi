@@ -1,0 +1,2 @@
+image_name,prompt_name,size_param,input_file_bytes,input_px_w,input_px_h,request_body_bytes,upload_ms,ttfb_ms,resp_download_ms,resp_bytes,result_kind,image_bytes,output_px_w,output_px_h,image_download_ms,total_ms,status,error
+img_0869.jpg,modern_dance,auto,1878777,2000,1334,1880469,263,92530,199,3768377,b64,2826014,1024,1536,,92994,ok,

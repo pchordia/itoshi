@@ -1,0 +1,94 @@
+{
+  "photos": [
+    {
+      "file_path": "selfie_test_black/black_3.jpg",
+      "file_name": "black_3.jpg",
+      "gender": "Male",
+      "num_people": 2,
+      "age": "Late 20s to Early 30s",
+      "background": "Beach with trees",
+      "caption": "Two men are smiling and posing for a selfie at the beach on a sunny day."
+    },
+    {
+      "file_path": "selfie_test_black/black_12.jpg",
+      "file_name": "black_12.jpg",
+      "gender": "Female",
+      "num_people": 5,
+      "age": "Early 20s",
+      "background": "Outdoor park",
+      "caption": "A young woman smiles brightly in the foreground, while other people walk in the background of a lush park setting."
+    },
+    {
+      "file_path": "selfie_test_black/black_6.jpg",
+      "file_name": "black_6.jpg",
+      "gender": "Unclear",
+      "num_people": 2,
+      "age": "Early 20s",
+      "background": "Indoor with a smooth, patterned floor",
+      "caption": "A person takes a selfie in an indoor setting, with another person partially visible in the background."
+    },
+    {
+      "file_path": "selfie_test_M/fb_16.jpg",
+      "file_name": "fb_16.jpg",
+      "gender": "Mixed",
+      "num_people": 2,
+      "age": "Child and Adult",
+      "background": "Beach with clear blue sky",
+      "caption": "An adult and child pose on a sandy beach, both giving a 'hang loose' hand gesture while enjoying a sunny day."
+    },
+    {
+      "file_path": "selfie_test_fb/fb_2.jpg",
+      "file_name": "fb_2.jpg",
+      "gender": "Male",
+      "num_people": 2,
+      "age": "30s",
+      "background": "Indoor room with yellow walls",
+      "caption": "Two men are smiling and posing closely for a selfie indoors."
+    },
+    {
+      "file_path": "selfie_test_fb/fb_1.jpg",
+      "file_name": "fb_1.jpg",
+      "gender": "Male",
+      "num_people": 3,
+      "age": "25-30",
+      "background": "Outdoor scenery with a lake and mountain",
+      "caption": "Three people wearing sunglasses are smiling and taking a selfie in front of a lake and mountain landscape."
+    },
+    {
+      "file_path": "selfie_test_fb/fb_16.jpg",
+      "file_name": "fb_16.jpg",
+      "gender": "Mixed",
+      "num_people": 2,
+      "age": "Adult and Child",
+      "background": "sandy beach with clear blue sky",
+      "caption": "An adult and a child pose with a surfboard on a sunny beach day, making a \"shaka\" hand sign."
+    },
+    {
+      "file_path": "selfie_test_M/fb_33.jpg",
+      "file_name": "fb_33.jpg",
+      "gender": "Mixed",
+      "num_people": 2,
+      "age": "Late 30s to 40s",
+      "background": "Football stadium with a game in progress",
+      "caption": "A couple wearing matching sports jerseys enjoys a football game from the stands on a sunny day."
+    },
+    {
+      "file_path": "selfie_test_fb/fb_14.jpg",
+      "file_name": "fb_14.jpg",
+      "gender": "Male",
+      "num_people": 2,
+      "age": "30s to 40s",
+      "background": "indoor with colorful abstract art",
+      "caption": "Two men are posing together indoors in front of a colorful artwork, one is wearing a hat and glasses."
+    },
+    {
+      "file_path": "selfie_test_fb/fb_31.jpg",
+      "file_name": "fb_31.jpg",
+      "gender": "Female",
+      "num_people": 2,
+      "age": "Adult and Child",
+      "background": "Indoor setting with a plain wall",
+      "caption": "A woman holding a child in a striped outfit indoors."
+    }
+  ]
+}

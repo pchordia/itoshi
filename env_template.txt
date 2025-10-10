@@ -22,3 +22,7 @@ IMAGE_SIZE=auto
 VIDEO_DURATION_SECONDS=5
 KLING_MODEL=Professional v2.1
 ANALYSIS_MODEL=chatgpt-5
+
+# i2v Negative Prompt (optional)
+# Use --use-negative-prompt flag to enable
+# Default file: prompts/i2v_negative_prompt.txt

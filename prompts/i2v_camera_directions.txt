@@ -1,0 +1,35 @@
+smooth1: Camera: slow 5s dolly-in; gimbal-smooth; FACE-LOCK center with ~8% headroom; auto-limit zoom to keep full body visible.
+smooth2: Camera: slow 5s dolly-out; gimbal-smooth; FACE-LOCK center; maintain 6–10% headroom; reduce motion if face drifts.
+smooth3: Camera: 2s push-in → 1s hold → 2s pull-back; FACE-LOCK; never crop forehead/chin; clamp push if face nears edge.
+smooth4: Camera: lateral slide left→right across 5s; subtle parallax; FACE-LOCK; micro-pan to keep eyes centered.
+smooth5: Camera: lateral slide right→left across 5s; steady; FACE-LOCK; head fully visible; no hunting.
+smooth6: Camera: small 10° arc orbit left→right; constant distance; FACE-LOCK; horizon level; clamp arc if profile >30°.
+smooth7: Camera: small 10° arc orbit right→left; FACE-LOCK; maintain frontal angle; head fully in frame.
+rhythm1: Camera: micro-zoom pulses (2–3%) on downbeats; FACE-LOCK; eyes always visible; cap pulses to prevent cropping.
+rhythm2: Camera: 5s push-pull boomerang (in→out→in); FACE-LOCK; tiny amplitude; preserve headroom.
+rhythm3: Camera: diagonal slide front-left→back-right; reverse at ~2.5s; FACE-LOCK; trim slide if face drifts.
+rhythm4: Camera: crane glide: start slightly high, float to eye level by 5s; FACE-LOCK; keep 6–10% headroom.
+rhythm5: Camera: low-angle rise: knee-height → chest-height; FACE-LOCK; adjust tilt so eyes remain visible.
+rhythm6: Camera: Dutch roll ±3° on downbeats; FACE-LOCK; return neutral by 5s; limit roll to keep head fully in frame.
+rhythm7: Camera: two quick snap-zooms (~0.2s) on big hits; FACE-LOCK; snaps ≤3%; never crop forehead/chin.
+energetic1: Camera: 2s push-in → whip-pan (≈20°) → 2.8s settle; FACE-LOCK during settle; clamp push if face nears edge.
+energetic2: Camera: 180° half-orbit over 5s; FACE-LOCK; keep face oriented to camera; ease if profile >45°.
+energetic3: Camera: handheld: organic sway + micro-jitter; FACE-LOCK; horizon level; avoid hand/hair occluding face.
+energetic4: Camera: subtle dolly-zoom (zoom in while dolly out); FACE-LOCK to keep face scale + headroom constant; full body visible.
+energetic5: Camera: diagonal slide back-right→front-left; brisk; FACE-LOCK; tiny counter-tilt; prevent endpoint cropping.
+energetic6: Camera: mini circular path (radius ~0.3 m) around subject; one lap in 5s; FACE-LOCK; frontal bias; clamp radius to keep head visible.
+energetic7: Camera: quick push-in (0–1s), drift (1–4s), decisive push-in tag (4–5s); FACE-LOCK; cap final push to avoid crop.
+cutbased1: Camera: 1s cuts (S1–S5): Master static → lateral slide L→R (micro) → Master → lateral slide R→L (micro) → Master; FACE-LOCK center, full-body, 6–10% headroom; auto-limit motion to avoid crop.
+cutbased2: Camera: 1s cuts (S1–S5): front mini-orbit 10° left → Master → mini-orbit 10° right → Master → gentle 5° front arc; FACE-LOCK; full-body; clamp arc if profile >30°.
+cutbased3: Camera: 1s cuts (S1–S5): micro push-in (≤3%) → micro pull-back (≤3%) → push-in → pull-back → neutral Master; FACE-LOCK; keep head fully visible; reduce zoom if needed.
+cutbased4: Camera: 1s cuts (S1–S5): eye-level Master → slightly high-angle (still full-body) → eye-level Master → slightly low-angle (still full-body) → eye-level Master; FACE-LOCK; maintain 8% headroom.
+cutbased5: Camera: 1s cuts (S1–S5): handheld front → handheld 3/4-left → handheld front → handheld 3/4-right → handheld front; FACE-LOCK; organic micro-jitter only; horizon level; keep full-body.
+cutbased6: Camera: 1s cuts (S1–S5): neutral → Dutch roll +3° → neutral → Dutch roll −3° → neutral; add tiny downbeat zoom pulses (≤2%); FACE-LOCK; never crop forehead/chin.
+cutbased7: Camera: 1s cuts (S1–S5): quick push-in tag (≤3%) → slide front-left↔back-right (micro) → Master → mini circular path (radius ~0.3 m) → final push-in tag (≤3%); FACE-LOCK; full-body; trim moves if face nears edge.
+cutbased8: Camera: 1s cuts (S1–S5): Front Master → 3/4-left (≈45°) micro slide → Front Master → 3/4-right (≈45°) micro slide → Front micro push-in ≤3%; FACE-LOCK on Front cuts (8% headroom); side cuts no zoom; full-body; auto-limit motion to avoid crop.
+cutbased9: Camera: 1s cuts (S1–S5): Front Master → Left profile (90°) lateral slide L→R (micro) → Front Master → Right profile (90°) slide R→L (micro) → Front snap-zoom ≤3%; FACE-LOCK on Front; side cuts head fully visible, no zoom; full-body.
+cutbased10: Camera: 1s cuts (S1–S5): Front Master → Back 3/4-left (OTS) mini-arc (≤10°) → Front Master → Back 3/4-right (OTS) mini-arc (≤10°) → Front push-in tag ≤3%; FACE-LOCK on Front; back cuts no zoom; head fully visible.
+cutbased11: Camera: 1s cuts (S1–S5): Left profile (90°) Master → Left profile micro slide → Left profile Master → Left profile micro slide (opposite) → Left profile Master; side-only sequence; no zoom; head fully visible; horizon level; full-body.
+cutbased12: Camera: 1s cuts (S1–S5): Back Master → Back mini-orbit left (≤10°) → Back Master → Back mini-orbit right (≤10°) → Back Master; back-only sequence; no zoom; head fully visible; horizon level; full-body.
+cutbased13: Camera: 1s cuts (S1–S5): Front Master → Left profile (90°) Master → Back Master → Right profile (90°) Master → Front micro push-in ≤3%; FACE-LOCK on Front; other angles no zoom; full-body; auto-limit to avoid crop.
+cutbased14: Camera: 1s cuts (S1–S5): Front Master → Left profile tracking L→R (micro) → Front Master → Back 3/4-right tracking (micro) → Front push-in ≤3%; FACE-LOCK on Front; side/back no zoom; keep head/shoulders fully visible; full-body.

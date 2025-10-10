@@ -23,6 +23,7 @@ import base64
 import random
 import argparse
 import threading
+import re
 from typing import List, Callable, Optional, Tuple
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
@@ -56,7 +57,7 @@ KLING_STATUS_URL_TEMPLATE = os.getenv(
 )
 ANIME_MAX_WORKERS = int(os.getenv("ANIME_MAX_WORKERS", "20"))
 I2V_MAX_WORKERS = int(os.getenv("I2V_MAX_WORKERS", "10"))
-KLING_MAX_WORKERS = int(os.getenv("KLING_MAX_WORKERS", "3"))  # Kling has stricter rate limits
+KLING_MAX_WORKERS = int(os.getenv("KLING_MAX_WORKERS", "20"))  # Kling has stricter rate limits
 MAX_WORKERS = int(os.getenv("MAX_WORKERS", "30"))
 REQUEST_TIMEOUT_SECONDS = int(os.getenv("REQUEST_TIMEOUT_SECONDS", "120"))
 MAX_RETRIES = int(os.getenv("MAX_RETRIES", "6"))
@@ -69,6 +70,33 @@ I2V_MODEL = os.getenv("I2V_MODEL", "kling")
 VEO_MODEL = os.getenv("VEO_MODEL", "veo-3.0-generate-001")
 GOOGLE_IMAGE_MODEL = os.getenv("GOOGLE_IMAGE_MODEL", "imagen-3.0-generate-001")
 GOOGLE_GEMINI_IMAGE_MODEL = os.getenv("GOOGLE_GEMINI_IMAGE_MODEL", "gemini-2.5-flash-image-preview")
+
+# ============= i2i to i2v Style Mappings =============
+# Automatically link certain i2i (anime) styles with specific i2v styles
+# When an i2i style in this dict is used, the corresponding i2v style will be used automatically
+I2I_TO_I2V_STYLE_MAP = {
+	"cartoonSaloon": "cartoonSaloon",
+	"demonslayer": "demonslayer",
+	"demonslayer2": "demonslayer",  # Both demonslayer i2i styles map to the same i2v
+	"demonhunter": "demonhunter",
+	"claymation": "claymation",
+	"lego": "lego",
+	"peanuts": "peanuts",
+	"antiquepuppet": "antiquepuppet",
+	"antiquepuppetcreepy": "antiquepuppet",  # antiquepuppetcreepy i2i maps to antiquepuppet i2v
+	"corpsebride": "corpsebride",
+	"french": "french",
+	"japaneseNoodleShop": "japaneseNoodleShop",
+}
+
+
+def get_linked_i2v_style(i2i_style_name: str) -> Optional[str]:
+	"""
+	Get the recommended i2v style for a given i2i style.
+	Returns the i2v style name if a mapping exists, None otherwise.
+	"""
+	return I2I_TO_I2V_STYLE_MAP.get(i2i_style_name)
+
 
 # Validate keys presence at runtime per subcommand
 
@@ -100,6 +128,101 @@ def read_named_prompts(path: str) -> List[Tuple[str, str]]:
 	if not entries:
 		raise ValueError(f"No prompts found in {path}")
 	return entries
+
+
+# ============= Gender/Sex Prompt Transformation =============
+
+# Hard pronoun maps (only applied if the prompt already uses gendered pronouns)
+PRONOUN_MAPS = {
+	"M": [
+		(r"\bthey\b", "he"),
+		(r"\bthem\b", "him"),
+		(r"\btheir\b", "his"),
+		(r"\btheirs\b", "his"),
+		(r"\bthemself\b", "himself"),
+		(r"\bthemselves\b", "himself"),
+		(r"\bshe\b", "he"),
+		(r"\bher\b", "his"),   # safe when used as possessive
+		(r"\bhers\b", "his"),
+	],
+	"F": [
+		(r"\bthey\b", "she"),
+		(r"\bthem\b", "her"),
+		(r"\btheir\b", "her"),
+		(r"\btheirs\b", "hers"),
+		(r"\bthemself\b", "herself"),
+		(r"\bthemselves\b", "herself"),
+		(r"\bhe\b", "she"),
+		(r"\bhim\b", "her"),
+		(r"\bhis\b", "her"),
+	],
+}
+
+# Lightweight style cues appended/inserted to tune movement quality
+STYLE_TAGS = {
+	"M": "Presenting a masculine look and movement quality (confident posture, strong chest/shoulder isolations).",
+	"F": "Presenting a feminine look and movement quality (fluid lines, hip emphasis, graceful arm styling).",
+}
+
+# Where to inject the style tag: before identity-lock sentence if we can find one
+IDENTITY_ANCHORS = [
+	"The anime character matches the uploaded reference exactly",
+	"The character matches the uploaded reference exactly",
+	"Preserve identity",
+]
+
+def inject_style_tag(prompt: str, tag: str) -> str:
+	"""Try to insert just before the identity anchor; otherwise append at the end."""
+	for anchor in IDENTITY_ANCHORS:
+		idx = prompt.find(anchor)
+		if idx != -1:
+			return prompt[:idx].rstrip() + " " + tag + " " + prompt[idx:]
+	# fallback: append
+	if prompt.strip().endswith("."):
+		return prompt.strip() + " " + tag
+	return prompt.strip() + ". " + tag
+
+def map_pronouns(prompt: str, gender: str) -> str:
+	"""Apply pronoun replacements based on gender."""
+	mapped = prompt
+	for pat, repl in PRONOUN_MAPS.get(gender, []):
+		mapped = re.sub(pat, repl, mapped, flags=re.IGNORECASE)
+	return mapped
+
+def tidy_spaces(text: str) -> str:
+	"""Remove accidental double spaces from replacements."""
+	return re.sub(r"\s{2,}", " ", text).strip()
+
+def genderize_prompt(original: str, gender: str) -> str:
+	"""
+	Transform a prompt to match a specified gender presentation.
+	
+	Args:
+		original: The original prompt text
+		gender: Either "M" (masculine) or "F" (feminine)
+	
+	Returns:
+		Transformed prompt with gender-appropriate styling and pronouns
+	"""
+	# Keep original choreography/constraints intact
+	out = original
+
+	# Inject gentle gender movement cue (non-destructive)
+	out = inject_style_tag(out, STYLE_TAGS.get(gender, ""))
+
+	# Harmonize pronouns if any are present
+	out = map_pronouns(out, gender)
+
+	# Optional: ensure face/body visibility constraints
+	vis_bits = []
+	if "entire body" not in out.lower():
+		vis_bits.append("Entire body is always in frame.")
+	if "head is always in the frame" not in out.lower() and "face" not in out.lower():
+		vis_bits.append("Head is always in the frame.")
+	if vis_bits:
+		out = out.rstrip(". ") + " " + " ".join(vis_bits)
+
+	return tidy_spaces(out)
 
 
 def ensure_dir(path: str) -> None:
@@ -180,6 +303,12 @@ def append_gemini_i2i_metrics_row(out_dir: str, row: dict) -> None:
 I2V_METRIC_HEADERS = [
 	"image_name",
 	"prompt_name",
+	"actual_prompt",
+	"gender",
+	"camera_direction",
+	"background",
+	"negative_prompt_used",
+	"cfg_scale",
 	"duration_seconds",
 	"input_px_w",
 	"input_px_h",
@@ -517,8 +646,12 @@ def generate_kling_jwt_token() -> str:
 	
 	return jwt.encode(payload, KLING_SECRET_KEY, algorithm="HS256", headers=headers)
 
-def kling_create_i2v_task(image_bytes: bytes, prompt: str, *, duration_seconds: int = VIDEO_DURATION_SECONDS) -> Tuple[str, dict]:
-	"""Creates a Kling I2V task and returns (task_id, create_metrics). Uses kling-v2-1 model."""
+def kling_create_i2v_task(image_bytes: bytes, prompt: str, *, duration_seconds: int = VIDEO_DURATION_SECONDS, negative_prompt: str = None, cfg_scale: float = 0.5) -> Tuple[str, dict]:
+	"""Creates a Kling I2V task and returns (task_id, create_metrics). Uses kling-v2-1 (Professional v2.1) model.
+	
+	Args:
+		cfg_scale: Classifier Free Guidance scale (0.0-1.0). Higher values = stricter adherence to prompt. Default: 0.5
+	"""
 	# Generate JWT token for authentication
 	jwt_token = generate_kling_jwt_token()
 	print(f"🔑 Generated JWT token for authentication")
@@ -532,13 +665,21 @@ def kling_create_i2v_task(image_bytes: bytes, prompt: str, *, duration_seconds: 
 	image_base64 = base64.b64encode(image_bytes).decode("utf-8")
 	
 	# Per TypeScript implementation: https://api-singapore.klingai.com/v1/videos/image2video
+	# Note: Only kling-v2-1 (Professional) is supported by the API
 	payload = {
 		"model_name": "kling-v2-1",
 		"duration": str(duration_seconds),
 		"image": image_base64,
-		"cfg_scale": 0.5,
+		"cfg_scale": cfg_scale,
 		"prompt": prompt,
 	}
+	
+	print(f"🎛️  CFG scale: {cfg_scale}")
+	
+	# Add negative prompt if provided
+	if negative_prompt:
+		payload["negative_prompt"] = negative_prompt
+		print(f"🚫 Using negative prompt: {negative_prompt[:50]}...")
 
 	url = KLING_CREATE_URL
 	print(f"🔍 Debug: Kling URL: {url}")
@@ -773,7 +914,7 @@ def process_analyze_one(src_path: str, out_dir: str, prompt_path: str, model: st
 	return out_path
 
 
-def process_anime_one(src_path: str, out_dir: str, prompts_path: str, size: str = IMAGE_SIZE, worker_id: int = 0, prompt_name: Optional[str] = None) -> Optional[str]:
+def process_anime_one(src_path: str, out_dir: str, prompts_path: str, size: str = IMAGE_SIZE, worker_id: int = 0, prompt_name: Optional[str] = None, backgrounds: Optional[List[str]] = None) -> Optional[str]:
 	"""Process one image to anime style with progress logging."""
 	print(f"🔄 Worker {worker_id}: Starting {os.path.basename(src_path)}")
 	
@@ -786,7 +927,15 @@ def process_anime_one(src_path: str, out_dir: str, prompts_path: str, size: str 
 		_, prompt = filtered[0]
 	else:
 		_, prompt = random.choice(choices)
-	print(f"🎨 Worker {worker_id}: Using prompt: {prompt[:50]}...")
+	
+	# Append random background if provided
+	if backgrounds:
+		background = random.choice(backgrounds)
+		prompt = f"{prompt} Background setting: {background}."
+		print(f"🎨 Worker {worker_id}: Using prompt: {prompt[:80]}...")
+		print(f"🖼️  Worker {worker_id}: Added background: {background[:60]}...")
+	else:
+		print(f"🎨 Worker {worker_id}: Using prompt: {prompt[:50]}...")
 	
 	print(f"🤖 Worker {worker_id}: Calling OpenAI API...")
 	func = with_backoff(openai_generate_anime_image_bytes)
@@ -955,9 +1104,16 @@ def process_i2i_gemini_one(src_path: str, out_dir: str, prompts_path: str, worke
 		append_gemini_i2i_metrics_row(out_dir, metrics)
 		raise
 
-def process_i2v_one(src_path: str, out_dir: str, prompts_path: str, duration_seconds: int = VIDEO_DURATION_SECONDS, worker_id: int = 0, prompt_name: Optional[str] = None, i2v_model: str = "kling") -> Optional[str]:
+def process_i2v_one(src_path: str, out_dir: str, prompts_path: str, duration_seconds: int = VIDEO_DURATION_SECONDS, worker_id: int = 0, prompt_name: Optional[str] = None, i2v_model: str = "kling", negative_prompt: Optional[str] = None, cfg_scale: float = 0.5, camera_directions: Optional[List[str]] = None, backgrounds: Optional[List[str]] = None, gender: Optional[str] = None) -> Optional[str]:
 	"""Process one image to video with progress logging."""
 	print(f"🎬 Worker {worker_id}: Starting video generation for {os.path.basename(src_path)}")
+	
+	# Track what was actually used for logging
+	used_gender = ""
+	used_camera = ""
+	used_background = ""
+	used_negative = "yes" if negative_prompt else "no"
+	
 	# Choose prompt (named or random)
 	if prompt_name:
 		choices_named = read_named_prompts(prompts_path)
@@ -968,7 +1124,35 @@ def process_i2v_one(src_path: str, out_dir: str, prompts_path: str, duration_sec
 	else:
 		prompts = read_prompts_file(prompts_path)
 		prompt = random.choice(prompts)
-	print(f"🎨 Worker {worker_id}: Using prompt: {prompt[:50]}...")
+	
+	# Apply gender transformation if specified
+	if gender and gender.upper() in ["M", "F"]:
+		used_gender = gender.upper()
+		original_prompt = prompt
+		prompt = genderize_prompt(prompt, gender.upper())
+		print(f"⚧️  Worker {worker_id}: Applied gender transformation ({gender.upper()})")
+		if len(prompt) != len(original_prompt):
+			print(f"🎨 Worker {worker_id}: Genderized prompt: {prompt[:80]}...")
+	
+	# Append random background if provided
+	if backgrounds:
+		background = random.choice(backgrounds)
+		used_background = background
+		prompt = f"{prompt} Setting: {background}."
+		print(f"🎨 Worker {worker_id}: Using prompt: {prompt[:80]}...")
+		print(f"🏞️  Worker {worker_id}: Added background: {background}")
+	else:
+		if not gender:
+			print(f"🎨 Worker {worker_id}: Using prompt: {prompt[:50]}...")
+	
+	# Append random camera direction if provided
+	if camera_directions:
+		camera_dir = random.choice(camera_directions)
+		used_camera = camera_dir
+		prompt = f"{prompt} {camera_dir}"
+		print(f"🎥 Worker {worker_id}: Added camera direction: {camera_dir[:60]}...")
+		if not backgrounds and not gender:
+			print(f"🎨 Worker {worker_id}: Using prompt: {prompt[:80]}...")
 	
 	# Load and resize image to reduce file size; prepare JPEG (Kling) and PNG (Veo3)
 	print(f"📁 Worker {worker_id}: Loading and resizing image...")
@@ -1027,7 +1211,7 @@ def process_i2v_one(src_path: str, out_dir: str, prompts_path: str, duration_sec
 		print(f"🚀 Worker {worker_id}: Creating Kling task...")
 		create_with_backoff = with_backoff(kling_create_i2v_task)
 		poll_with_backoff = with_backoff(kling_poll_task_result)
-		create_result = create_with_backoff(img_bytes_jpeg, prompt, duration_seconds=duration_seconds)
+		create_result = create_with_backoff(img_bytes_jpeg, prompt, duration_seconds=duration_seconds, negative_prompt=negative_prompt, cfg_scale=cfg_scale)
 		if isinstance(create_result, tuple):
 			task_id, create_metrics = create_result
 		else:
@@ -1055,6 +1239,12 @@ def process_i2v_one(src_path: str, out_dir: str, prompts_path: str, duration_sec
 		row = {
 			"image_name": os.path.basename(src_path),
 			"prompt_name": prompt_name or "",
+			"actual_prompt": prompt[:200] if len(prompt) <= 200 else prompt[:197] + "...",
+			"gender": used_gender,
+			"camera_direction": used_camera[:100] if used_camera else "",
+			"background": used_background[:100] if used_background else "",
+			"negative_prompt_used": used_negative,
+			"cfg_scale": cfg_scale,
 			"duration_seconds": duration_seconds,
 			"input_px_w": in_w,
 			"input_px_h": in_h,
@@ -1086,9 +1276,30 @@ def run_anime(args: argparse.Namespace) -> None:
 	ensure_dir(args.output)
 	# Create unique run output directory
 	out_dir = make_unique_output_dir(args.output)
+	
+	# Load backgrounds if requested
+	backgrounds = None
+	if args.use_backgrounds:
+		try:
+			backgrounds = read_prompts_file(args.backgrounds_file)
+			print(f"🖼️  Using backgrounds from: {args.backgrounds_file}")
+			print(f"   Loaded {len(backgrounds)} backgrounds")
+		except FileNotFoundError:
+			print(f"⚠️  Warning: Backgrounds file not found: {args.backgrounds_file}")
+			print(f"   Continuing without backgrounds...")
+	
 	workers = max(1, min(args.workers, ANIME_MAX_WORKERS))
 	print(f"🎨 Anime: processing {len(files)} images with up to {workers} workers (cap {ANIME_MAX_WORKERS})…")
 	print(f"📁 Output: {out_dir}")
+	
+	# Check if there's a linked i2v style for this i2i style
+	if args.prompt_name:
+		linked_i2v = get_linked_i2v_style(args.prompt_name)
+		if linked_i2v:
+			print(f"🔗 Style '{args.prompt_name}' is linked to i2v style '{linked_i2v}'")
+			print(f"   💡 Recommended i2v command:")
+			print(f"   python src/batch_media.py i2v --input {out_dir} --output outputs/videos \\")
+			print(f"      --prompts prompts/kling_prompts.txt --prompt-name {linked_i2v} --workers 20")
 	
 	# Create progress bar
 	pbar = tqdm(total=len(files), desc="Anime conversion", unit="image")
@@ -1097,7 +1308,7 @@ def run_anime(args: argparse.Namespace) -> None:
 		# Submit all tasks with worker IDs
 		futures = {}
 		for i, p in enumerate(files):
-			fut = ex.submit(process_anime_one, p, out_dir, args.prompts, args.size, i, args.prompt_name)
+			fut = ex.submit(process_anime_one, p, out_dir, args.prompts, args.size, i, args.prompt_name, backgrounds)
 			futures[fut] = (p, i)
 		
 		# Process completed tasks
@@ -1161,6 +1372,87 @@ def run_i2v(args: argparse.Namespace) -> None:
 	ensure_dir(args.output)
 	# Create unique run output directory
 	out_dir = make_unique_output_dir(args.output)
+	
+	# Load negative prompt if requested
+	negative_prompt = None
+	if args.use_negative_prompt:
+		try:
+			with open(args.negative_prompt_file, 'r', encoding='utf-8') as f:
+				negative_prompt = f.read().strip()
+			print(f"🚫 Using negative prompt from: {args.negative_prompt_file}")
+			print(f"   Content: {negative_prompt}")
+		except FileNotFoundError:
+			print(f"⚠️  Warning: Negative prompt file not found: {args.negative_prompt_file}")
+			print(f"   Continuing without negative prompt...")
+	
+	# Load backgrounds if requested
+	backgrounds = None
+	if args.use_i2v_backgrounds:
+		try:
+			with open(args.i2v_backgrounds_file, 'r', encoding='utf-8') as f:
+				backgrounds = [line.strip() for line in f if line.strip()]
+			print(f"🏞️  Using backgrounds from: {args.i2v_backgrounds_file}")
+			print(f"   Loaded {len(backgrounds)} backgrounds")
+		except FileNotFoundError:
+			print(f"⚠️  Warning: Backgrounds file not found: {args.i2v_backgrounds_file}")
+			print(f"   Continuing without backgrounds...")
+	
+	# Load camera directions if requested
+	camera_directions = None
+	if args.use_camera_directions:
+		try:
+			camera_directions_named = read_named_prompts(args.camera_directions_file)
+			
+			# Filter by category if specified
+			if args.camera_category:
+				category_prefix = args.camera_category.lower()
+				camera_directions_named = [(name, direction) for name, direction in camera_directions_named 
+				                            if name.lower().startswith(category_prefix)]
+				if not camera_directions_named:
+					print(f"⚠️  Warning: No camera directions found matching category '{args.camera_category}'")
+					print(f"   Continuing without camera directions...")
+				else:
+					print(f"🎥 Using camera directions from: {args.camera_directions_file}")
+					print(f"   Filtered by category: {args.camera_category}")
+					print(f"   Loaded {len(camera_directions_named)} camera directions")
+			
+			# Further filter by number range if specified
+			if args.camera_range and camera_directions_named:
+				try:
+					range_parts = args.camera_range.split('-')
+					if len(range_parts) == 2:
+						min_num = int(range_parts[0])
+						max_num = int(range_parts[1])
+						# Extract number from name (e.g., "cutbased8" -> 8)
+						filtered = []
+						for name, direction in camera_directions_named:
+							# Extract trailing digits
+							import re
+							match = re.search(r'(\d+)$', name)
+							if match:
+								num = int(match.group(1))
+								if min_num <= num <= max_num:
+									filtered.append((name, direction))
+						camera_directions_named = filtered
+						if not camera_directions_named:
+							print(f"⚠️  Warning: No camera directions found in range {args.camera_range}")
+							print(f"   Continuing without camera directions...")
+						else:
+							print(f"   Further filtered by range: {args.camera_range}")
+							print(f"   Final count: {len(camera_directions_named)} camera directions")
+				except (ValueError, IndexError):
+					print(f"⚠️  Warning: Invalid range format '{args.camera_range}'. Use format '8-14'")
+			
+			if not args.camera_category and not args.camera_range:
+				print(f"🎥 Using camera directions from: {args.camera_directions_file}")
+				print(f"   Loaded {len(camera_directions_named)} camera directions")
+			
+			# Extract just the direction text (not the names)
+			camera_directions = [direction for _, direction in camera_directions_named] if camera_directions_named else None
+		except FileNotFoundError:
+			print(f"⚠️  Warning: Camera directions file not found: {args.camera_directions_file}")
+			print(f"   Continuing without camera directions...")
+	
 	# Use model-specific worker limits
 	if args.model == "kling":
 		max_workers_cap = KLING_MAX_WORKERS
@@ -1173,11 +1465,16 @@ def run_i2v(args: argparse.Namespace) -> None:
 	# Create progress bar
 	pbar = tqdm(total=len(files), desc="Video generation", unit="video")
 	
+	# Get gender parameter if specified
+	gender = getattr(args, 'gender', None)
+	if gender:
+		print(f"⚧️  Using gender transformation: {gender.upper()}")
+	
 	with ThreadPoolExecutor(max_workers=workers) as ex:
 		# Submit all tasks with worker IDs
 		futures = {}
 		for i, p in enumerate(files):
-			fut = ex.submit(process_i2v_one, p, out_dir, args.prompts, args.duration, i, args.prompt_name, args.model)
+			fut = ex.submit(process_i2v_one, p, out_dir, args.prompts, args.duration, i, args.prompt_name, args.model, negative_prompt, args.cfg_scale, camera_directions, backgrounds, gender)
 			futures[fut] = (p, i)
 		
 		# Process completed tasks
@@ -1243,6 +1540,8 @@ def build_parser() -> argparse.ArgumentParser:
 	p_anime.add_argument("--workers", type=int, default=ANIME_MAX_WORKERS, help=f"Max parallel workers (default {ANIME_MAX_WORKERS}, cap {ANIME_MAX_WORKERS})")
 	p_anime.add_argument("--size", default=IMAGE_SIZE, help="OpenAI image size, e.g., 1024x1024 or auto (default: auto)")
 	p_anime.add_argument("--prompt-name", help="Select a named prompt from the prompts file (format: name: prompt)")
+	p_anime.add_argument("--use-backgrounds", action="store_true", help="Randomly append backgrounds to prompts")
+	p_anime.add_argument("--backgrounds-file", default="prompts/i2i_backgrounds.txt", help="Path to backgrounds file (default: prompts/i2i_backgrounds.txt)")
 	p_anime.set_defaults(func=run_anime)
 
 	# Google i2i subcommand
@@ -1262,6 +1561,16 @@ def build_parser() -> argparse.ArgumentParser:
 	p_i2v.add_argument("--duration", type=int, default=VIDEO_DURATION_SECONDS, help="Video duration seconds (5 or 10)")
 	p_i2v.add_argument("--prompt-name", help="Select a named prompt from the prompts file (format: name: prompt)")
 	p_i2v.add_argument("--model", choices=["kling", "veo3"], default=I2V_MODEL, help="i2v model/provider to use: kling or veo3 (default from I2V_MODEL)")
+	p_i2v.add_argument("--cfg-scale", type=float, default=0.5, help="CFG scale for prompt adherence (0.0-1.0, Kling only). Higher = stricter. Default: 0.5")
+	p_i2v.add_argument("--use-negative-prompt", action="store_true", help="Use negative prompt from prompts/i2v_negative_prompt.txt (Kling only)")
+	p_i2v.add_argument("--negative-prompt-file", default="prompts/i2v_negative_prompt.txt", help="Path to negative prompt file (default: prompts/i2v_negative_prompt.txt)")
+	p_i2v.add_argument("--use-i2v-backgrounds", action="store_true", help="Randomly append backgrounds to i2v prompts")
+	p_i2v.add_argument("--i2v-backgrounds-file", default="prompts/i2i_backgrounds.txt", help="Path to backgrounds file (default: prompts/i2i_backgrounds.txt)")
+	p_i2v.add_argument("--use-camera-directions", action="store_true", help="Randomly append camera directions to prompts")
+	p_i2v.add_argument("--camera-directions-file", default="prompts/i2v_camera_directions.txt", help="Path to camera directions file (default: prompts/i2v_camera_directions.txt)")
+	p_i2v.add_argument("--camera-category", help="Filter camera directions by category prefix (e.g., 'smooth', 'rhythm', 'energetic', 'cutbased')")
+	p_i2v.add_argument("--camera-range", help="Filter by number range (e.g., '8-14' for cutbased8 through cutbased14)")
+	p_i2v.add_argument("--gender", choices=["M", "F", "m", "f"], help="Apply gender presentation transformation: M (masculine) or F (feminine)")
 	p_i2v.set_defaults(func=run_i2v)
 
 	# Analyze subcommand

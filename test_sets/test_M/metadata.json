@@ -1,0 +1,92 @@
+[
+  {
+    "file_path": "selfie_test_2/Screenshot 2025-09-22 at 11.06.40 AM.png",
+    "file_name": "Screenshot 2025-09-22 at 11.06.40 AM.png",
+    "gender": "Male",
+    "num_people": 1,
+    "age": "Mid 30s",
+    "background": "Indoor with a painting on the wall and a wooden door",
+    "caption": "A man is taking a selfie in an indoor setting."
+  },
+  {
+    "file_path": "selfie_test_fb/fb_11.jpg",
+    "file_name": "fb_11.jpg",
+    "gender": "Male",
+    "num_people": 1,
+    "age": "Mid 40s",
+    "background": "Outdoor setting with trees and furniture in the background",
+    "caption": "A man is smiling and posing in an outdoor area during sunset."
+  },
+  {
+    "file_path": "selfie_test_2/Screenshot 2025-09-22 at 11.06.24 AM.png",
+    "file_name": "Screenshot 2025-09-22 at 11.06.24 AM.png",
+    "gender": "Male",
+    "num_people": 1,
+    "age": "25-30",
+    "background": "Plain wall",
+    "caption": "A man with facial hair poses shirtless against a neutral background."
+  },
+  {
+    "file_path": "selfie_test_M/fb_12.jpg",
+    "file_name": "fb_12.jpg",
+    "gender": "Male",
+    "num_people": 1,
+    "age": "Mid 50s",
+    "background": "Outdoor park with buildings and trees",
+    "caption": "A man in a suit stands outdoors, smiling slightly in front of a park-like setting with buildings in the background."
+  },
+  {
+    "file_path": "selfies - testing + ftux/midjourney/arturs273_dating_app_selfie_of_a_of_a_regular_not_attractive_sl_e77a522f-6726-4d6b-af26-98ecb51022f6.png",
+    "file_name": "arturs273_dating_app_selfie_of_a_of_a_regular_not_attractive_sl_e77a522f-6726-4d6b-af26-98ecb51022f6.png",
+    "gender": "Male",
+    "num_people": 1,
+    "age": "Late teens to early 20s",
+    "background": "Indoor room with shelves and curtains visible",
+    "caption": "A young male poses for a black and white portrait in a room."
+  },
+  {
+    "file_path": "selfie_test_black/black-1.jpeg",
+    "file_name": "black-1.jpeg",
+    "gender": "Male",
+    "num_people": 1,
+    "age": "Late 20s to early 30s",
+    "background": "Indoor with plain wall",
+    "caption": "A man wearing a beanie and sweatshirt looks directly at the camera in a well-lit indoor setting."
+  },
+  {
+    "file_path": "selfie_test_M/fb_8.jpg",
+    "file_name": "fb_8.jpg",
+    "gender": "Male",
+    "num_people": 1,
+    "age": "60-70",
+    "background": "outdoor lake with forest",
+    "caption": "A man in outdoor gear stands by a lake holding a walking stick, with a forested backdrop."
+  },
+  {
+    "file_path": "selfie_test_fb/fb_42.jpg",
+    "file_name": "fb_42.jpg",
+    "gender": "Male",
+    "num_people": 1,
+    "age": "Elderly",
+    "background": "Bright indoor setting with large windows opening to a patio with plants",
+    "caption": "An elderly man in a blue shirt stands indoors near a table, with a view of a colorful patio outside."
+  },
+  {
+    "file_path": "selfie_test_M/fb_20.jpg",
+    "file_name": "fb_20.jpg",
+    "gender": "Male",
+    "num_people": 1,
+    "age": "Late 30s",
+    "background": "On a boat with ocean and mountainous landscape",
+    "caption": "A tattooed man wearing a sun hat relaxes on a boat, enjoying a sunny day at sea."
+  },
+  {
+    "file_path": "selfie_test_black/black_8.jpg",
+    "file_name": "black_8.jpg",
+    "gender": "Male",
+    "num_people": 1,
+    "age": "Mid 20s",
+    "background": "Outdoor stadium seating",
+    "caption": "A man is taking a selfie outdoors in a stadium, wearing a blue cap and black leather jacket."
+  }
+]

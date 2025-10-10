@@ -1,0 +1,92 @@
+[
+  {
+    "file_path": "selfies - testing + ftux/organic/Screenshot 2025-09-22 at 11.20.59 AM.png",
+    "file_name": "Screenshot 2025-09-22 at 11.20.59 AM.png",
+    "gender": "Female",
+    "num_people": 1,
+    "age": "Late teens to early 20s",
+    "background": "Interior of a car",
+    "caption": "A young woman playfully bites a straw while sitting in a car."
+  },
+  {
+    "file_path": "selfies - testing + ftux/organic/Screenshot 2025-09-22 at 11.03.32 AM.png",
+    "file_name": "Screenshot 2025-09-22 at 11.03.32 AM.png",
+    "gender": "Female",
+    "num_people": 1,
+    "age": "Mid 20s",
+    "background": "Indoor room with a ceiling light and a painting on the wall",
+    "caption": "A woman smiles at the camera in a well-lit room."
+  },
+  {
+    "file_path": "selfies - testing + ftux/organic/Screenshot 2025-09-22 at 11.04.27 AM.png",
+    "file_name": "Screenshot 2025-09-22 at 11.04.27 AM.png",
+    "gender": "Female",
+    "num_people": 1,
+    "age": "Mid 30s",
+    "background": "Inside a car with a view of an outdoor park visible through the window",
+    "caption": "A woman smiles at the camera while sitting in a car with a park in the background."
+  },
+  {
+    "file_path": "selfies - testing + ftux/organic/Screenshot 2025-09-22 at 11.07.51 AM.png",
+    "file_name": "Screenshot 2025-09-22 at 11.07.51 AM.png",
+    "gender": "Female",
+    "num_people": 1,
+    "age": "Early 20s",
+    "background": "Indoor public transport setting",
+    "caption": "A person with glasses looks directly at the camera inside a public transport vehicle."
+  },
+  {
+    "file_path": "selfie_test_black/black_15.jpeg",
+    "file_name": "black_15.jpeg",
+    "gender": "Female",
+    "num_people": 1,
+    "age": "60-70",
+    "background": "outdoor urban setting",
+    "caption": "A woman with gray hair smiles brightly while standing in an outdoor urban area."
+  },
+  {
+    "file_path": "selfie_test_fb/fb_10.jpg",
+    "file_name": "fb_10.jpg",
+    "gender": "Female",
+    "num_people": 1,
+    "age": "Mid 50s",
+    "background": "Christmas-themed background with decorations",
+    "caption": "A woman smiles at the camera, with a Christmas-decorated background."
+  },
+  {
+    "file_path": "selfies - testing + ftux/organic/Screenshot 2025-09-22 at 11.05.19 AM.png",
+    "file_name": "Screenshot 2025-09-22 at 11.05.19 AM.png",
+    "gender": "Female",
+    "num_people": 1,
+    "age": "Mid 40s",
+    "background": "indoor setting",
+    "caption": "A woman smiles brightly at the camera in an indoor environment."
+  },
+  {
+    "file_path": "selfie_test_black/black_11.jpg",
+    "file_name": "black_11.jpg",
+    "gender": "Female",
+    "num_people": 1,
+    "age": "Mid 20s",
+    "background": "outdoor park",
+    "caption": "A woman is taking a selfie in a park with autumn foliage in the background."
+  },
+  {
+    "file_path": "selfies - testing + ftux/organic/Screenshot 2025-09-22 at 11.22.00 AM.png",
+    "file_name": "Screenshot 2025-09-22 at 11.22.00 AM.png",
+    "gender": "Female",
+    "num_people": 1,
+    "age": "Teenager",
+    "background": "Inside a car",
+    "caption": "A teenage girl smiles while sitting inside a car, wearing a grey sweater and braces."
+  },
+  {
+    "file_path": "selfies - testing + ftux/organic/selfie - 2.jpeg",
+    "file_name": "selfie - 2.jpeg",
+    "gender": "Female",
+    "num_people": 1,
+    "age": "Early 20s",
+    "background": "Car interior with a view of the road through the window",
+    "caption": "A young woman takes a selfie while sitting inside a car."
+  }
+]

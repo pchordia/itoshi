@@ -1,0 +1,13 @@
+# Gender Transformation Module Requirements
+# 
+# This module has NO external dependencies!
+# It uses only Python standard library modules.
+#
+# Minimum Python version: 3.9+
+#
+# Built-in modules used:
+# - re (regular expressions)
+# - typing (type hints)
+#
+# No pip install needed! 🎉
+
