@@ -67,7 +67,8 @@ VIDEO_DURATION_SECONDS = int(os.getenv("VIDEO_DURATION_SECONDS", "5"))
 KLING_MODEL = os.getenv("KLING_MODEL", "Professional v2.1")
 ANALYSIS_MODEL = os.getenv("ANALYSIS_MODEL", "gpt-5")
 I2V_MODEL = os.getenv("I2V_MODEL", "kling")
-VEO_MODEL = os.getenv("VEO_MODEL", "veo-3.0-generate-001")
+VEO_MODEL = os.getenv("VEO_MODEL", "veo-3.1-generate-preview")
+SORA_MODEL = os.getenv("SORA_MODEL", "sora-2")
 GOOGLE_IMAGE_MODEL = os.getenv("GOOGLE_IMAGE_MODEL", "imagen-3.0-generate-001")
 GOOGLE_GEMINI_IMAGE_MODEL = os.getenv("GOOGLE_GEMINI_IMAGE_MODEL", "gemini-2.5-flash-image-preview")
 
@@ -320,6 +321,7 @@ I2V_METRIC_HEADERS = [
 	"create_resp_bytes",
 	"create_total_ms",
 	"task_id",
+	"video_id",  # Kling video ID for lip sync
 	"poll_attempts",
 	"poll_seconds",
 	"video_url",
@@ -766,13 +768,19 @@ def kling_poll_task_result(task_id: str, *, poll_interval: float = 5.0, timeout_
 					raise RuntimeError("No videos found in successful task result")
 				
 				video_url = videos[0].get("url")
+				video_id = videos[0].get("id")  # Save video ID for lip sync
+				
 				if not video_url:
 					raise RuntimeError("No video URL found in task result")
 				
 				print(f"🎬 Video ready: {video_url}")
+				if video_id:
+					print(f"🆔 Video ID: {video_id}")
+				
 				poll_metrics = {
 					"poll_attempts": attempts + 1,
 					"poll_seconds": int((time.perf_counter() - loop_start)),
+					"video_id": video_id or "",  # Include video_id in metrics
 				}
 				return video_url, poll_metrics
 			
@@ -883,6 +891,174 @@ def veo_generate_video(image_png_bytes: bytes, prompt: str, save_path: str, *, p
 	return metrics
 
 
+def sora_generate_video(image_bytes: bytes, prompt: str, save_path: str, duration_seconds: int = 5, *, poll_interval: float = 10.0, timeout_seconds: int = 600) -> dict:
+	"""Generate a video using OpenAI Sora 2 with an image as input and save to save_path.
+	Returns a metrics dict compatible with I2V_METRIC_HEADERS (best-effort).
+	
+	Note: Sora 2 requires exact dimensions from: 720x1280, 1280x720, 1024x1792, 1792x1024
+	The image_bytes will be resized to the best-fit supported size.
+	"""
+	if not OPENAI_API_KEY:
+		raise RuntimeError("OPENAI_API_KEY is required for Sora 2 generation")
+
+	from PIL import Image
+	from io import BytesIO
+	
+	print(f"🚀 Sora2: starting video generation with {SORA_MODEL}…")
+	start_time = time.perf_counter()
+	
+	# Sora 2 supported sizes (only 2 sizes supported as of now)
+	SUPPORTED_SIZES = [
+		(720, 1280),   # vertical
+		(1280, 720),   # horizontal
+	]
+	
+	# Load image and determine best-fit size
+	img = Image.open(BytesIO(image_bytes))
+	orig_width, orig_height = img.size
+	orig_aspect = orig_width / orig_height
+	
+	# Find the supported size with closest aspect ratio
+	best_size = min(SUPPORTED_SIZES, key=lambda s: abs((s[0]/s[1]) - orig_aspect))
+	target_width, target_height = best_size
+	size_str = f"{target_width}x{target_height}"
+	
+	print(f"📐 Sora2: resizing from {orig_width}x{orig_height} to {size_str}")
+	
+	# Resize image to exact target dimensions
+	if img.mode in ('RGBA', 'LA', 'P'):
+		img = img.convert('RGB')
+	img_resized = img.resize((target_width, target_height), Image.Resampling.LANCZOS)
+	
+	# Save resized image to bytes
+	buf = BytesIO()
+	img_resized.save(buf, format='PNG', optimize=True)
+	resized_image_bytes = buf.getvalue()
+	
+	print(f"📏 Sora2: resized image size: {len(resized_image_bytes)} bytes")
+	
+	# Note: Sora 2 generates 4-8 second videos
+	# We can suggest duration in the prompt if needed
+	duration_hint = ""
+	if duration_seconds > 8:
+		duration_hint = f" The video should be approximately {duration_seconds} seconds long."
+	elif duration_seconds < 4:
+		duration_hint = f" The video should be approximately {duration_seconds} seconds long."
+	
+	final_prompt = prompt + duration_hint if duration_hint else prompt
+	
+	# Prepare the multipart/form-data request
+	api_url = "https://api.openai.com/v1/videos"
+	headers = {
+		"Authorization": f"Bearer {OPENAI_API_KEY}"
+	}
+	
+	# Wrap the API call with exponential backoff
+	def _create_video():
+		try:
+			files = {
+				'input_reference': ('image.png', resized_image_bytes, 'image/png')
+			}
+			data = {
+				'model': SORA_MODEL,
+				'prompt': final_prompt,
+				'size': size_str
+			}
+			resp = requests.post(api_url, headers=headers, files=files, data=data, timeout=REQUEST_TIMEOUT_SECONDS)
+			if resp.status_code != 200:
+				error_detail = resp.json().get('error', {}) if resp.headers.get('content-type', '').startswith('application/json') else {'message': resp.text}
+				print(f"❌ Sora2 API error: {error_detail.get('message', resp.text)}")
+			resp.raise_for_status()
+			return resp.json()
+		except Exception as e:
+			# Check for rate limit errors
+			if "429" in str(e) or "rate_limit" in str(e).lower():
+				print(f"⚠️ Sora2: Rate limit hit, will retry with backoff...")
+			raise
+	
+	# Apply backoff to handle rate limits
+	video_response = with_backoff(_create_video)()
+	
+	# Get the video ID
+	video_id = video_response.get('id')
+	if not video_id:
+		raise RuntimeError(f"Sora 2 response missing video ID: {video_response}")
+	
+	print(f"📋 Sora2 video generation started: {video_id}")
+	print(f"   Model: {SORA_MODEL}, Size: {size_str}")
+	
+	# Poll until completion
+	end_deadline = time.time() + timeout_seconds
+	attempts = 0
+	video_url = None
+	
+	while True:
+		attempts += 1
+		if time.time() > end_deadline:
+			raise TimeoutError("Sora 2 generation timed out")
+		
+		print(f"⏳ Sora2 polling attempt {attempts}…")
+		
+		# Retrieve the video status
+		status_resp = requests.get(f"{api_url}/{video_id}", headers=headers, timeout=REQUEST_TIMEOUT_SECONDS)
+		status_resp.raise_for_status()
+		video_status = status_resp.json()
+		
+		status = video_status.get('status')
+		progress = video_status.get('progress', 0)
+		print(f"   Status: {status}, Progress: {progress}%")
+		
+		if status == "completed":
+			print(f"✅ Sora2: video generation completed")
+			# Use the correct video content download endpoint
+			video_url = f"{api_url}/{video_id}/content"
+			break
+		elif status == "failed":
+			error_msg = video_status.get('error', 'Unknown error')
+			raise RuntimeError(f"Sora 2 generation failed: {error_msg}")
+		
+		time.sleep(poll_interval)
+	
+	total_ms = int((time.perf_counter() - start_time) * 1000)
+	print(f"✅ Sora2: operation completed in {total_ms/1000:.1f}s")
+	
+	# Download the video
+	print(f"📥 Sora2: downloading video from {video_url}...")
+	
+	download_start = time.perf_counter()
+	resp = requests.get(video_url, headers=headers, timeout=REQUEST_TIMEOUT_SECONDS)
+	resp.raise_for_status()
+	download_ms = int((time.perf_counter() - download_start) * 1000)
+	
+	video_bytes = len(resp.content)
+	with open(save_path, "wb") as vf:
+		vf.write(resp.content)
+	
+	print(f"💾 Sora2: video saved to {save_path} ({video_bytes} bytes)")
+	
+	# Compose metrics best-effort
+	metrics = {
+		"json_body_bytes": "",
+		"create_upload_ms": 0,
+		"create_ttfb_ms": total_ms,
+		"create_resp_download_ms": 0,
+		"create_resp_bytes": 0,
+		"create_total_ms": total_ms,
+		"task_id": video_id,
+		"poll_attempts": attempts,
+		"poll_seconds": int(total_ms / 1000),
+		"video_url": video_url,
+		"video_ttfb_ms": 0,
+		"video_resp_download_ms": download_ms,
+		"video_total_ms": download_ms,
+		"video_bytes": video_bytes,
+		"total_end_to_end_ms": total_ms + download_ms,
+		"status": "ok",
+		"error": "",
+	}
+	return metrics
+
+
 # ------------------------- Workers -------------------------
 
 def save_bytes(path: str, blob: bytes) -> None:
@@ -914,7 +1090,7 @@ def process_analyze_one(src_path: str, out_dir: str, prompt_path: str, model: st
 	return out_path
 
 
-def process_anime_one(src_path: str, out_dir: str, prompts_path: str, size: str = IMAGE_SIZE, worker_id: int = 0, prompt_name: Optional[str] = None, backgrounds: Optional[List[str]] = None) -> Optional[str]:
+def process_anime_one(src_path: str, out_dir: str, prompts_path: str, size: str = IMAGE_SIZE, worker_id: int = 0, prompt_name: Optional[str] = None, backgrounds: Optional[List[str]] = None, use_bgnative: bool = False, use_bgnative_gemini: bool = False) -> Optional[str]:
 	"""Process one image to anime style with progress logging."""
 	print(f"🔄 Worker {worker_id}: Starting {os.path.basename(src_path)}")
 	
@@ -928,8 +1104,35 @@ def process_anime_one(src_path: str, out_dir: str, prompts_path: str, size: str 
 	else:
 		_, prompt = random.choice(choices)
 	
-	# Append random background if provided
-	if backgrounds:
+	# Handle Gemini-specific native background mode with stronger language
+	if use_bgnative_gemini:
+		# Use much stronger language for Gemini to preserve background
+		original_prompt = prompt
+		gemini_bg_instruction = "the exact background, setting, and environment visible in this image. CRITICAL: You must preserve and recreate the actual background from the input photo - maintain the same location type, lighting, colors, objects, and spatial layout. Do not create a neutral or generic background. Analyze the background carefully and reproduce it faithfully in the target style"
+		prompt = prompt.replace("neutral background", gemini_bg_instruction)
+		
+		if prompt != original_prompt:
+			print(f"🔍 Worker {worker_id}: Using Gemini native background preservation")
+			print(f"🎨 Worker {worker_id}: Modified prompt: {prompt[:120]}...")
+		else:
+			print(f"⚠️  Worker {worker_id}: No 'neutral background' found in prompt to replace")
+			print(f"🎨 Worker {worker_id}: Using prompt: {prompt[:50]}...")
+	
+	# Handle standard native background mode if enabled
+	elif use_bgnative:
+		# Simply replace "neutral background" with instruction to use the photo's background
+		original_prompt = prompt
+		prompt = prompt.replace("neutral background", "background inspired by the background in this image")
+		
+		if prompt != original_prompt:
+			print(f"🔍 Worker {worker_id}: Using native background from photo")
+			print(f"🎨 Worker {worker_id}: Modified prompt: {prompt[:80]}...")
+		else:
+			print(f"⚠️  Worker {worker_id}: No 'neutral background' found in prompt to replace")
+			print(f"🎨 Worker {worker_id}: Using prompt: {prompt[:50]}...")
+	
+	# Append random background if provided (and not using native)
+	elif backgrounds:
 		background = random.choice(backgrounds)
 		prompt = f"{prompt} Background setting: {background}."
 		print(f"🎨 Worker {worker_id}: Using prompt: {prompt[:80]}...")
@@ -978,7 +1181,7 @@ def process_anime_one(src_path: str, out_dir: str, prompts_path: str, size: str 
 	return out_path
 
 
-def process_i2i_gemini_one(src_path: str, out_dir: str, prompts_path: str, worker_id: int = 0, prompt_name: Optional[str] = None) -> Optional[str]:
+def process_i2i_gemini_one(src_path: str, out_dir: str, prompts_path: str, worker_id: int = 0, prompt_name: Optional[str] = None, backgrounds: Optional[List[str]] = None, use_bgnative: bool = False, use_bgnative_gemini: bool = False) -> Optional[str]:
 	"""Gemini image editing via generate_content with image+prompt per docs: https://ai.google.dev/gemini-api/docs/image-generation"""
 	if not GOOGLE_API_KEY:
 		raise RuntimeError("GOOGLE_API_KEY is required for Google i2i")
@@ -998,6 +1201,29 @@ def process_i2i_gemini_one(src_path: str, out_dir: str, prompts_path: str, worke
 		_, prompt = random.choice(choices)
 
 	print(f"🔄 (i2i) Worker {worker_id}: Starting {os.path.basename(src_path)}")
+	
+	# Handle Gemini-specific native background mode with stronger language
+	if use_bgnative_gemini:
+		original_prompt = prompt
+		gemini_bg_instruction = "the exact background, setting, and environment visible in this image. CRITICAL: You must preserve and recreate the actual background from the input photo - maintain the same location type, lighting, colors, objects, and spatial layout. Do not create a neutral or generic background. Analyze the background carefully and reproduce it faithfully in the target style"
+		prompt = prompt.replace("neutral background", gemini_bg_instruction)
+		
+		if prompt != original_prompt:
+			print(f"🔍 (i2i) Worker {worker_id}: Using Gemini native background preservation")
+	
+	# Handle standard native background mode if enabled
+	elif use_bgnative:
+		original_prompt = prompt
+		prompt = prompt.replace("neutral background", "background inspired by the background in this image")
+		
+		if prompt != original_prompt:
+			print(f"🔍 (i2i) Worker {worker_id}: Using native background from photo")
+	
+	# Append random background if provided (and not using native)
+	elif backgrounds:
+		background = random.choice(backgrounds)
+		prompt = f"{prompt} Background setting: {background}."
+		print(f"🖼️  (i2i) Worker {worker_id}: Added background: {background[:60]}...")
 	from google import genai  # type: ignore
 	from google.genai import types  # type: ignore
 
@@ -1178,7 +1404,9 @@ def process_i2v_one(src_path: str, out_dir: str, prompts_path: str, duration_sec
 	out_name = os.path.splitext(os.path.basename(src_path))[0] + ".mp4"
 	out_path = os.path.join(out_dir, out_name)
 
-	if (i2v_model or "kling").lower() == "veo3":
+	model_lower = (i2v_model or "kling").lower()
+	
+	if model_lower == "veo3":
 		print(f"🤖 Worker {worker_id}: Using Google Veo 3 ({VEO_MODEL})")
 		try:
 			metrics = veo_generate_video(img_bytes_png, prompt, out_path)
@@ -1198,6 +1426,47 @@ def process_i2v_one(src_path: str, out_dir: str, prompts_path: str, duration_sec
 			append_i2v_metrics_row(out_dir, {
 				"image_name": os.path.basename(src_path),
 				"prompt_name": prompt_name or "",
+				"duration_seconds": duration_seconds,
+				"input_px_w": in_w,
+				"input_px_h": in_h,
+				"input_image_bytes": len(img_bytes_png),
+				"status": "error",
+				"error": str(e)[:200],
+			})
+			raise
+	elif model_lower == "sora2":
+		print(f"🤖 Worker {worker_id}: Using OpenAI Sora 2 ({SORA_MODEL})")
+		try:
+			# Sora 2 accepts both PNG and JPEG, use PNG for better quality
+			metrics = sora_generate_video(img_bytes_png, prompt, out_path, duration_seconds=duration_seconds)
+			row = {
+				"image_name": os.path.basename(src_path),
+				"prompt_name": prompt_name or "",
+				"actual_prompt": prompt[:200] if len(prompt) <= 200 else prompt[:197] + "...",
+				"gender": used_gender,
+				"camera_direction": used_camera[:100] if used_camera else "",
+				"background": used_background[:100] if used_background else "",
+				"negative_prompt_used": used_negative,
+				"cfg_scale": cfg_scale,
+				"duration_seconds": duration_seconds,
+				"input_px_w": in_w,
+				"input_px_h": in_h,
+				"input_image_bytes": len(img_bytes_png),
+				**metrics,
+			}
+			append_i2v_metrics_row(out_dir, row)
+			print(f"✅ Worker {worker_id}: Completed {os.path.basename(src_path)} -> {out_name}")
+			return out_path
+		except Exception as e:
+			append_i2v_metrics_row(out_dir, {
+				"image_name": os.path.basename(src_path),
+				"prompt_name": prompt_name or "",
+				"actual_prompt": prompt[:200] if len(prompt) <= 200 else prompt[:197] + "...",
+				"gender": used_gender,
+				"camera_direction": used_camera[:100] if used_camera else "",
+				"background": used_background[:100] if used_background else "",
+				"negative_prompt_used": used_negative,
+				"cfg_scale": cfg_scale,
 				"duration_seconds": duration_seconds,
 				"input_px_w": in_w,
 				"input_px_h": in_h,
@@ -1250,16 +1519,16 @@ def process_i2v_one(src_path: str, out_dir: str, prompts_path: str, duration_sec
 			"input_px_h": in_h,
 			"input_image_bytes": len(img_bytes_jpeg),
 			**create_metrics,
-			**poll_metrics,
-			"video_url": video_url,
-			"video_ttfb_ms": 0,
-			"video_resp_download_ms": int((vid_t2 - vid_t0) * 1000),
-			"video_total_ms": int((vid_t2 - vid_t0) * 1000),
-			"video_bytes": video_bytes,
-			"total_end_to_end_ms": int((vid_t2 - vid_t0) * 1000) + (create_metrics.get("create_total_ms", 0) or 0),
-			"status": "ok",
-			"error": "",
-		}
+		**poll_metrics,
+		"video_url": video_url,
+		"video_ttfb_ms": 0,
+		"video_resp_download_ms": int((vid_t2 - vid_t0) * 1000),
+		"video_total_ms": int((vid_t2 - vid_t0) * 1000),
+		"video_bytes": video_bytes,
+		"total_end_to_end_ms": int((vid_t2 - vid_t0) * 1000) + (create_metrics.get("create_total_ms", 0) or 0) + (poll_metrics.get("poll_seconds", 0) * 1000),
+		"status": "ok",
+		"error": "",
+	}
 		append_i2v_metrics_row(out_dir, row)
 		
 		print(f"✅ Worker {worker_id}: Completed {os.path.basename(src_path)} -> {out_name}")
@@ -1341,11 +1610,31 @@ def run_i2i_gemini(args: argparse.Namespace) -> None:
 	print(f"🖼️  Google i2i: processing {len(files)} images with up to {workers} workers (cap {ANIME_MAX_WORKERS})…")
 	print(f"📁 Output: {out_dir}")
 
+	# Load backgrounds if requested
+	backgrounds = None
+	if getattr(args, 'use_backgrounds', False):
+		try:
+			with open(args.backgrounds_file, 'r', encoding='utf-8') as f:
+				backgrounds = [line.strip() for line in f if line.strip()]
+			print(f"🏞️  Using backgrounds from: {args.backgrounds_file}")
+			print(f"   Loaded {len(backgrounds)} backgrounds")
+		except FileNotFoundError:
+			print(f"⚠️  Warning: Backgrounds file not found: {args.backgrounds_file}")
+			print(f"   Continuing without backgrounds...")
+	
+	# Check if native background modes are enabled
+	use_bgnative = getattr(args, 'usebgnative', False)
+	use_bgnative_gemini = getattr(args, 'usebgnative_gemini', False)
+	if use_bgnative:
+		print(f"🔍 Native background mode enabled - will use background from each photo")
+	if use_bgnative_gemini:
+		print(f"🔍 Gemini native background mode enabled - will use stronger background preservation")
+
 	pbar = tqdm(total=len(files), desc="Google i2i", unit="image")
 	with ThreadPoolExecutor(max_workers=workers) as ex:
 		futures = {}
 		for i, p in enumerate(files):
-			fut = ex.submit(process_i2i_gemini_one, p, out_dir, args.prompts, i, args.prompt_name)
+			fut = ex.submit(process_i2i_gemini_one, p, out_dir, args.prompts, i, args.prompt_name, backgrounds, use_bgnative, use_bgnative_gemini)
 			futures[fut] = (p, i)
 		for fut in as_completed(futures):
 			src, worker_id = futures[fut]
@@ -1362,6 +1651,74 @@ def run_i2i_gemini(args: argparse.Namespace) -> None:
 	
 	pbar.close()
 	print(f"🎉 Google i2i complete! Check {out_dir} for results.")
+
+
+def run_i2i(args: argparse.Namespace) -> None:
+	"""Unified i2i function that routes to OpenAI or Google based on --model flag"""
+	model = getattr(args, 'model', 'google').lower()
+	
+	if model == 'openai':
+		# Use OpenAI gpt-image-1
+		files = list_images(args.input)
+		if not files:
+			print("No images found.")
+			return
+		ensure_dir(args.output)
+		out_dir = make_unique_output_dir(args.output)
+		
+		# Load backgrounds if requested
+		backgrounds = None
+		if getattr(args, 'use_backgrounds', False):
+			try:
+				with open(args.backgrounds_file, 'r', encoding='utf-8') as f:
+					backgrounds = [line.strip() for line in f if line.strip()]
+				print(f"🏞️  Using backgrounds from: {args.backgrounds_file}")
+				print(f"   Loaded {len(backgrounds)} backgrounds")
+			except FileNotFoundError:
+				print(f"⚠️  Warning: Backgrounds file not found: {args.backgrounds_file}")
+				print(f"   Continuing without backgrounds...")
+		
+		workers = max(1, min(getattr(args, 'workers', ANIME_MAX_WORKERS), ANIME_MAX_WORKERS))
+		size = getattr(args, 'size', IMAGE_SIZE)
+		print(f"🎨 OpenAI i2i: processing {len(files)} images with up to {workers} workers (cap {ANIME_MAX_WORKERS})…")
+		print(f"📁 Output: {out_dir}")
+		
+		# Check if native background analysis is enabled
+		use_bgnative = getattr(args, 'usebgnative', False)
+		use_bgnative_gemini = getattr(args, 'usebgnative_gemini', False)
+		if use_bgnative:
+			print(f"🔍 Native background mode enabled - will use background from each photo")
+		if use_bgnative_gemini:
+			print(f"🔍 Gemini native background mode enabled - will use stronger background preservation")
+		
+		pbar = tqdm(total=len(files), desc="OpenAI i2i", unit="image")
+		with ThreadPoolExecutor(max_workers=workers) as ex:
+			futures = {}
+			for i, p in enumerate(files):
+				fut = ex.submit(process_anime_one, p, out_dir, args.prompts, size, i, args.prompt_name, backgrounds, use_bgnative, use_bgnative_gemini)
+				futures[fut] = (p, i)
+			for fut in as_completed(futures):
+				src, worker_id = futures[fut]
+				try:
+					res = fut.result()
+					if res:
+						pbar.set_postfix_str(f"✅ {os.path.basename(src)}")
+					else:
+						pbar.set_postfix_str(f"❌ {os.path.basename(src)}")
+				except Exception as e:
+					pbar.set_postfix_str(f"❌ {os.path.basename(src)}: {str(e)[:30]}...")
+				finally:
+					pbar.update(1)
+		
+		pbar.close()
+		print(f"🎉 OpenAI i2i complete! Check {out_dir} for results.")
+	
+	elif model == 'google':
+		# Use Google Gemini
+		run_i2i_gemini(args)
+	
+	else:
+		raise ValueError(f"Unknown i2i model: {model}. Choose 'openai' or 'google'.")
 
 
 def run_i2v(args: argparse.Namespace) -> None:
@@ -1533,7 +1890,23 @@ def build_parser() -> argparse.ArgumentParser:
 	parser = argparse.ArgumentParser(description="Batch media: anime (OpenAI) and i2v (Kling)")
 	sub = parser.add_subparsers(dest="cmd", required=True)
 
-	p_anime = sub.add_parser("anime", help="Stylize images to anime via OpenAI gpt-image-1")
+	# Unified i2i subcommand with model selection
+	p_i2i = sub.add_parser("i2i", help="Image-to-image via OpenAI (gpt-image-1) or Google (Gemini)")
+	p_i2i.add_argument("--input", required=True, help="Input images directory")
+	p_i2i.add_argument("--output", required=True, help="Output directory for stylized images")
+	p_i2i.add_argument("--prompts", required=True, help="Path to i2i prompts text file")
+	p_i2i.add_argument("--model", choices=["openai", "google"], default="google", help="i2i model/provider: openai (gpt-image-1) or google (gemini-2.5-flash-image-preview). Default: google")
+	p_i2i.add_argument("--workers", type=int, default=ANIME_MAX_WORKERS, help=f"Max parallel workers (default {ANIME_MAX_WORKERS}, cap {ANIME_MAX_WORKERS})")
+	p_i2i.add_argument("--size", default=IMAGE_SIZE, help="OpenAI image size, e.g., 1024x1024 or auto (OpenAI only, default: auto)")
+	p_i2i.add_argument("--prompt-name", help="Select a named prompt from the prompts file (format: name: prompt)")
+	p_i2i.add_argument("--use-backgrounds", action="store_true", help="Randomly append backgrounds to prompts (OpenAI only)")
+	p_i2i.add_argument("--backgrounds-file", default="prompts/i2i_backgrounds.txt", help="Path to backgrounds file (OpenAI only, default: prompts/i2i_backgrounds.txt)")
+	p_i2i.add_argument("--usebgnative", action="store_true", help="Analyze each photo's background and use it instead of 'neutral background'")
+	p_i2i.add_argument("--usebgnative-gemini", action="store_true", help="Use stronger background preservation language for Gemini (replaces 'neutral background' with detailed preservation instructions)")
+	p_i2i.set_defaults(func=run_i2i)
+
+	# Keep 'anime' as an alias for backwards compatibility
+	p_anime = sub.add_parser("anime", help="[DEPRECATED] Use 'i2i --model openai' instead. Stylize images to anime via OpenAI gpt-image-1")
 	p_anime.add_argument("--input", required=True, help="Input images directory")
 	p_anime.add_argument("--output", required=True, help="Output directory for anime images")
 	p_anime.add_argument("--prompts", required=True, help="Path to anime prompts text file")
@@ -1542,25 +1915,17 @@ def build_parser() -> argparse.ArgumentParser:
 	p_anime.add_argument("--prompt-name", help="Select a named prompt from the prompts file (format: name: prompt)")
 	p_anime.add_argument("--use-backgrounds", action="store_true", help="Randomly append backgrounds to prompts")
 	p_anime.add_argument("--backgrounds-file", default="prompts/i2i_backgrounds.txt", help="Path to backgrounds file (default: prompts/i2i_backgrounds.txt)")
+	p_anime.add_argument("--usebgnative", action="store_true", help="Analyze each photo's background and use it instead of 'neutral background'")
 	p_anime.set_defaults(func=run_anime)
 
-	# Google i2i subcommand
-	p_i2i = sub.add_parser("i2i", help="Image-to-image via Google (Imagen/Gemini)")
-	p_i2i.add_argument("--input", required=True, help="Input images directory")
-	p_i2i.add_argument("--output", required=True, help="Output directory for stylized images")
-	p_i2i.add_argument("--prompts", required=True, help="Path to i2i prompts text file")
-	p_i2i.add_argument("--workers", type=int, default=ANIME_MAX_WORKERS, help=f"Max parallel workers (default {ANIME_MAX_WORKERS}, cap {ANIME_MAX_WORKERS})")
-	p_i2i.add_argument("--prompt-name", help="Select a named prompt from the prompts file (format: name: prompt)")
-	p_i2i.set_defaults(func=run_i2i_gemini)
-
-	p_i2v = sub.add_parser("i2v", help="Convert images to video via Kling or Google Veo 3")
+	p_i2v = sub.add_parser("i2v", help="Convert images to video via Kling, Google Veo 3, or OpenAI Sora 2")
 	p_i2v.add_argument("--input", required=True, help="Input images directory")
 	p_i2v.add_argument("--output", required=True, help="Output directory for videos")
 	p_i2v.add_argument("--prompts", required=True, help="Path to i2v prompts text file")
 	p_i2v.add_argument("--workers", type=int, default=I2V_MAX_WORKERS, help=f"Max parallel workers (default {I2V_MAX_WORKERS}, cap {I2V_MAX_WORKERS})")
 	p_i2v.add_argument("--duration", type=int, default=VIDEO_DURATION_SECONDS, help="Video duration seconds (5 or 10)")
 	p_i2v.add_argument("--prompt-name", help="Select a named prompt from the prompts file (format: name: prompt)")
-	p_i2v.add_argument("--model", choices=["kling", "veo3"], default=I2V_MODEL, help="i2v model/provider to use: kling or veo3 (default from I2V_MODEL)")
+	p_i2v.add_argument("--model", choices=["kling", "veo3", "sora2"], default=I2V_MODEL, help="i2v model/provider to use: kling, veo3, or sora2 (default from I2V_MODEL)")
 	p_i2v.add_argument("--cfg-scale", type=float, default=0.5, help="CFG scale for prompt adherence (0.0-1.0, Kling only). Higher = stricter. Default: 0.5")
 	p_i2v.add_argument("--use-negative-prompt", action="store_true", help="Use negative prompt from prompts/i2v_negative_prompt.txt (Kling only)")
 	p_i2v.add_argument("--negative-prompt-file", default="prompts/i2v_negative_prompt.txt", help="Path to negative prompt file (default: prompts/i2v_negative_prompt.txt)")
