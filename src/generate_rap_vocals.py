@@ -62,11 +62,10 @@ def generate_vocal_track(lyrics: str, vocal_prompt_template: str, output_path: s
     
     try:
         # Generate music using ElevenLabs Music API
-        # Note: This uses the music generation endpoint
-        response = client.text_to_sound_effects.convert(
-            text=full_prompt,
-            duration_seconds=duration,
-            prompt_influence=0.3
+        # Uses the music streaming endpoint for rap vocals
+        response = client.music.stream(
+            prompt=full_prompt,
+            music_length_ms=duration * 1000
         )
         
         # Save the audio
@@ -85,6 +84,7 @@ def generate_vocal_track(lyrics: str, vocal_prompt_template: str, output_path: s
         
     except Exception as e:
         print(f"❌ Error generating vocal track: {e}")
+        print(f"   Make sure you're using ElevenLabs Music API (not TTS)")
         raise
 
 def main():
