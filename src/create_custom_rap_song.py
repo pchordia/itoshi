@@ -73,8 +73,7 @@ def generate_lyrics_with_chatgpt(song_description: str, lyrics_prompt_template: 
         response = client.responses.create(
             model="gpt-5.1",
             input=f"You are a professional rap lyricist. Write lyrics that are catchy, flow well, and match the user's intent.\n\n{prompt}",
-            reasoning={"effort": "low"},
-            text={"verbosity": "low"}
+            reasoning={"effort": "medium"}
         )
         
         lyrics = response.output_text.strip()
@@ -131,8 +130,7 @@ def generate_music_prompt_with_chatgpt(genre_name: str, genre_desc: str, lyrics:
         response = client.responses.create(
             model="gpt-5.1",
             input=f"You are a music producer expert. Create detailed prompts for AI music generation that specify instruments, BPM, vocal style, and production elements.\n\n{prompt}",
-            reasoning={"effort": "medium"},
-            text={"verbosity": "medium"}
+            reasoning={"effort": "medium"}
         )
         
         music_prompt = response.output_text.strip()
