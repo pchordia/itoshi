@@ -1,0 +1,24 @@
+Create a music prompt for a text-to-music system inspired by this reference track:
+
+Reference Track: {REFERENCE_TRACK}
+
+Analyze the reference track's key characteristics and create a prompt that captures:
+- The specific production style, instruments, and sound palette
+- BPM and rhythmic feel
+- Vocal style, delivery, and effects
+- Signature production elements and textures
+- Overall vibe and energy
+
+Include these custom lyrics in the prompt:
+{LYRICS}
+
+CRITICAL INSTRUCTIONS FOR THE MUSIC PROMPT:
+- The track must start with vocals immediately (no intro, no beat-only section)
+- All lyrics must be rapped/sung within the 10-second excerpt
+- Don't start with intro, start with lyrics immediately in 10s excerpt
+- Emphasize that vocals start on the first beat
+
+Format the output as a complete, detailed prompt ready to send to ElevenLabs Music API. Include production details inspired by the reference track, then include "rapping the following lyrics:" followed by the lyrics.
+
+Output only the prompt, no explanations or commentary.
+

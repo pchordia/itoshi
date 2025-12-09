@@ -1,0 +1,15 @@
+Compose rap lyrics that match the intent of this. The target length is 10-15s when rapped.
+
+Song description:
+{SONG_DESCRIPTION}
+
+Requirements:
+- 40-60 words total (for 10-15 seconds of rapping)
+- Use AABB or ABAB rhyme scheme
+- Include 1-2 ad-libs in parentheses like (Uh), (Yeah), (Let's go!)
+- Make it catchy and memorable
+- Keep it clean (no explicit content)
+- Write 4 lines that flow well when rapped
+
+Output only the lyrics, no explanations or extra text.
+

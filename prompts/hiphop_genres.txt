@@ -1,0 +1,13 @@
+# Hip-Hop Subgenres (Ordered by Popularity)
+
+1. Trap - Modern trap with 808s, hi-hats, and heavy bass (140-160 BPM)
+2. Boom-Bap - Classic 90s style with sampled drums and jazzy loops (85-95 BPM)
+3. West Coast - G-Funk sound with synths, funky bass, and laid-back vibe (90-100 BPM)
+4. Drill - Dark, aggressive beats with sliding 808s (140-150 BPM)
+5. Cloud Rap - Dreamy, atmospheric with reverb and spacey production (120-140 BPM)
+6. East Coast - Gritty, sample-heavy with hard drums (90-100 BPM)
+7. Dirty South - Crunk-influenced with heavy bass and energetic beats (140-150 BPM)
+8. Alternative Hip-Hop - Experimental, jazzy elements, unconventional (Variable BPM)
+9. Conscious Rap - Socially aware with jazzy/soulful backing (85-95 BPM)
+10. Mumble Rap - Melodic, heavily autotuned trap beats (130-150 BPM)
+

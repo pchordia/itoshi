@@ -1,0 +1,23 @@
+Create a music prompt for a text-to-music system based on the following rap genre.
+
+Genre: {GENRE}
+
+The prompt should describe:
+- Specific instruments and sounds characteristic of this genre
+- BPM range appropriate for the style
+- Vocal style and delivery
+- Overall vibe and energy
+- Any signature production elements
+
+Include these lyrics in the prompt:
+{LYRICS}
+
+CRITICAL INSTRUCTIONS FOR THE MUSIC PROMPT:
+- The track must start with vocals immediately (no intro, no beat-only section)
+- All lyrics must be rapped/sung within the 10-second excerpt
+- Don't start with intro, start with lyrics immediately in 10s excerpt
+
+Format the output as a complete prompt ready to send to ElevenLabs Music API. Start with the genre description, include technical details, emphasize that vocals start immediately with no intro, then include "rapping the following lyrics:" followed by the lyrics.
+
+Output only the prompt, no explanations.
+

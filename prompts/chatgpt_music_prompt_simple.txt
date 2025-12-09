@@ -1,0 +1,13 @@
+Create a short music prompt for ElevenLabs Music API inspired by this reference track:
+
+Reference: {REFERENCE_TRACK}
+
+Create a concise prompt (max 200 words) that includes:
+1. Genre and BPM
+2. Key instruments (3-4 items)
+3. Vocal style (1 sentence)
+4. Must state: "Start vocals immediately on first beat with no intro"
+5. Include: "Rapping these lyrics: {LYRICS}"
+
+Keep it simple and direct. Output only the prompt.
+
